@@ -4,13 +4,10 @@ from num2words import num2words
 from decimal import Decimal, getcontext
 import io
 import re
-import locale
 from dateutil.parser import parse, ParserError
+from babel.dates import format_date
 
-try:
-    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-except locale.Error:
-    st.warning("Localidade 'pt_BR.UTF-8' não encontrada. Nomes de meses podem aparecer em inglês.")
+st.set_page_config(layout="wide", page_title="Gerador de Termos FUNDOPEM")
 
 getcontext().prec = 12
 
@@ -35,7 +32,6 @@ def format_cpf(cpf_str):
     return f"{cleaned_cpf[0:3]}.{cleaned_cpf[3:6]}.{cleaned_cpf[6:9]}-{cleaned_cpf[9:11]}"
 
 def format_full_date(date_str):
-    """Interpreta qualquer formato de data e retorna no padrão dd.mm.yyyy."""
     if not date_str: return ""
     try:
         dt = parse(date_str, dayfirst=True)
@@ -48,7 +44,7 @@ def format_month_year(date_str):
     if not date_str: return ""
     try:
         dt = parse(date_str, dayfirst=True)
-        return dt.strftime('%B de %Y').capitalize()
+        return format_date(dt, 'MMMM de yyyy', locale='pt_BR').capitalize()
     except (ParserError, ValueError, TypeError):
         return date_str
 
@@ -125,7 +121,6 @@ def docx_replace(doc, replacements):
 
 
 # --- INTERFACE GRÁFICA (STREAMLIT) ---
-st.set_page_config(layout="wide", page_title="Gerador de Termos FUNDOPEM")
 st.title("📄 Gerador Automatizado de Termos de Ajuste")
 st.markdown("Preencha os campos abaixo para gerar o documento.")
 
@@ -227,8 +222,7 @@ if st.button("🚀 Gerar Documento Word", type="primary", use_container_width=Tr
                 replacements[placeholder] = value
         
         if st.session_state.representante_cpf:
-            cpf_formatado = format_cpf(st.session_state.representante_cpf)
-            replacements['CPF #XXX.XXX.XXX-XX#'] = f"CPF {cpf_formatado}"
+            replacements['CPF #XXX.XXX.XXX-XX#'] = f"CPF {format_cpf(st.session_state.representante_cpf)}"
         
         if st.session_state.data_inicio:
             replacements['#inicio#'] = format_full_date(st.session_state.data_inicio)
