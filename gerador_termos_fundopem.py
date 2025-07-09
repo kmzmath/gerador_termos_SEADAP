@@ -186,7 +186,24 @@ st.set_page_config(page_title="Gerador Termos FUNDOPEM",
 st.markdown(
     "<style>input:focus,select:focus,textarea:focus{outline:3px solid #ff922b!important;border:2px solid #ff922b!important}</style>",
     unsafe_allow_html=True)
-st.title("📄 Gerador Automatizado de Termos de Ajuste")
+
+# Versão e título
+col_title, col_version = st.columns([4, 1])
+with col_title:
+    st.title("📄 Gerador Automatizado de Termos de Ajuste")
+with col_version:
+    st.markdown(
+        """
+        <div style='text-align: right; padding-top: 20px;'>
+            <span style='background-color: #ff922b; color: white; padding: 5px 10px; border-radius: 5px; font-size: 14px; font-weight: bold;'>
+                v2.0.1
+            </span>
+            <br>
+            <span style='font-size: 12px; color: #666;'>09/07/2025</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 if not TEMPLATE_FILE.exists():
     st.error(f"Template não encontrado: {TEMPLATE_FILE.resolve()}")
@@ -348,6 +365,38 @@ if gerar:
                 f"Parecer nº {parecer_num}, de {data_formato_ponto(dt_parecer)} "
                 f"(DOE de {data_formato_ponto(dt_doe)})"
             )
+        
+        # Corrigir a data do processo PROA - procurando pelo texto exato do template
+        if proa_num and dt_proa:
+            # O template tem o texto completo incluindo a vírgula dupla
+            mp["e na documentação que instrui o processo administrativo nº #proa#, de 03 de setembro de 2024, que passam a fazer parte integrante deste instrumento."] = (
+                f"e na documentação que instrui o processo administrativo nº {proa_num}, de {data_formato_ponto(dt_proa)}, que passam a fazer parte integrante deste instrumento."
+            )
+
+        # --- DEBUG: Mostrar substituições ---
+        with st.expander("🔍 Debug - Substituições a serem realizadas"):
+            st.write("### Principais substituições:")
+            
+            # Valores
+            st.write("**Valores:**")
+            for k, v in mp.items():
+                if "UIF/RS" in k and len(k) > 50:
+                    st.code(f"{k[:80]}... → {v}")
+            
+            # Placeholders simples
+            st.write("\n**Placeholders simples:**")
+            placeholders = [k for k in mp.keys() if "#" in k or "xxx" in k or "XXX" in k]
+            for k in sorted(placeholders):
+                st.code(f"{k} → {mp[k]}")
+            
+            # Datas
+            st.write("\n**Datas e textos com datas:**")
+            for k, v in mp.items():
+                if "dd.mm.aaaa" in k or "de 03 de setembro" in k or "Parecer" in k:
+                    st.code(f"{k[:100]}... → {v}")
+            
+            # Total de substituições
+            st.info(f"Total de substituições a serem realizadas: {len(mp)}")
 
         # --- Geração DOCX ---
         doc = Document(str(TEMPLATE_FILE))
