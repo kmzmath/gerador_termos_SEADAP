@@ -248,26 +248,42 @@ if gerar:
         mp: Dict[str, str] = {}
 
         # --- Valores (independentes) ---
-        add_valor("693.224,32 UIF/RS (seiscentos e noventa e três mil, duzentos e vinte e quatro inteiros, e trinta e dois centésimos de Unidades de Incentivo do FUNDOPEM/RS)",
-                  valor_total, mp)
-        add_valor("193.874,41 UIF/RS (cento e noventa e três mil, oitocentos e setenta e quatro inteiros, e quarenta e um centésimos de Unidades de Incentivo do FUNDOPEM/RS)",
-                  valor_apres_inicial, mp, "=g10")
-        add_valor("159.123,22 UIF/RS (cento e cinquenta e nove mil, cento e vinte e três inteiros, e vinte e dois centésimos de Unidades de Incentivo do FUNDOPEM/RS)",
-                  valor_inicial_aceito, mp, "=g11")
+        # 2.1 - Valor total do projeto
+        if valor_total:
+            fmt_total = br_currency(valor_total)
+            mp["693.224,32 UIF/RS (seiscentos e noventa e três mil, duzentos e vinte e quatro inteiros, e trinta e dois centésimos de Unidades de Incentivo do FUNDOPEM/RS)"] = f"{fmt_total} UIF/RS ({num_extenso(fmt_total)} de Unidades de Incentivo do FUNDOPEM/RS)"
+        
+        # 2.3 - Valor apresentado inicialmente
+        if valor_apres_inicial:
+            fmt_apres = br_currency(valor_apres_inicial)
+            mp["193.874,41 UIF/RS (cento e noventa e três mil, oitocentos e setenta e quatro inteiros, e quarenta e um centésimos de Unidades de Incentivo do FUNDOPEM/RS)"] = f"{fmt_apres} UIF/RS ({num_extenso(fmt_apres)} de Unidades de Incentivo do FUNDOPEM/RS)"
+            mp["=g10"] = fmt_apres
+        
+        # 2.3.1 - Valor inicialmente aceito
+        if valor_inicial_aceito:
+            fmt_aceito = br_currency(valor_inicial_aceito)
+            mp["159.123,22 UIF/RS (cento e cinquenta e nove mil, cento e vinte e três inteiros, e vinte e dois centésimos de Unidades de Incentivo do FUNDOPEM/RS)"] = f"{fmt_aceito} UIF/RS ({num_extenso(fmt_aceito)} de Unidades de Incentivo do FUNDOPEM/RS)"
+            mp["=g11"] = fmt_aceito
 
-        # 2.4 placeholder conforme template
-        ph_24 = ("Do valor estabelecido no item 2.3.1 desta Cláusula, o montante de "
-                 "113.874,41 UIF/RS (cento e noventa e três mil, oitocentos e setenta e quatro inteiros, "
-                 "e quarenta e um centésimos de Unidades de Incentivo do FUNDOPEM/RS) contempla os investimentos realizados em equipamentos.")
+        # 2.4 - Equipamentos
         if equips_24:
-            mp[ph_24] = (f"Do valor estabelecido no item 2.3.1 desta Cláusula, o montante de "
-                         f"{br_currency(equips_24)} UIF/RS "
-                         f"({num_extenso(br_currency(equips_24))} de Unidades de Incentivo do FUNDOPEM/RS) contempla os investimentos realizados em equipamentos.")
-
-        add_valor("239.509,00 UIF/RS (duzentos e trinta e nove mil, e quinhentos e nove inteiros de Unidades de Incentivo do FUNDOPEM/RS)",
-                  limite_max_liberado, mp, "=g8")
-        add_valor("62.299,92 UIF/RS (sessenta e dois mil, duzentos e noventa e nove inteiros, e noventa e dois centésimos de Unidades de Incentivo do FUNDOPEM/RS)",
-                  valor_liberado_fruicao, mp, "=g21")
+            fmt_equip = br_currency(equips_24)
+            mp["Do valor estabelecido no item 2.3.1 desta Cláusula, o montante de 113.874,41 UIF/RS (cento e noventa e três mil, oitocentos e setenta e quatro inteiros, e quarenta e um centésimos de Unidades de Incentivo do FUNDOPEM/RS) contempla os investimentos realizados em equipamentos."] = (
+                f"Do valor estabelecido no item 2.3.1 desta Cláusula, o montante de "
+                f"{fmt_equip} UIF/RS ({num_extenso(fmt_equip)} de Unidades de Incentivo do FUNDOPEM/RS) contempla os investimentos realizados em equipamentos."
+            )
+        
+        # 4.1.2 - Limite máximo liberado
+        if limite_max_liberado:
+            fmt_limite = br_currency(limite_max_liberado)
+            mp["239.509,00 UIF/RS (duzentos e trinta e nove mil, e quinhentos e nove inteiros de Unidades de Incentivo do FUNDOPEM/RS)"] = f"{fmt_limite} UIF/RS ({num_extenso(fmt_limite)} de Unidades de Incentivo do FUNDOPEM/RS)"
+            mp["=g8"] = fmt_limite
+        
+        # 4.1.2.1 - Valor liberado para fruição
+        if valor_liberado_fruicao:
+            fmt_fruicao = br_currency(valor_liberado_fruicao)
+            mp["62.299,92 UIF/RS (sessenta e dois mil, duzentos e noventa e nove inteiros, e noventa e dois centésimos de Unidades de Incentivo do FUNDOPEM/RS)"] = f"{fmt_fruicao} UIF/RS ({num_extenso(fmt_fruicao)} de Unidades de Incentivo do FUNDOPEM/RS)"
+            mp["=g21"] = fmt_fruicao
 
         # --- Pontos & percentual ---
         if pontos_fundopem:
@@ -277,6 +293,12 @@ if gerar:
             mp["#integrar# (trinta e quatro vírgula cinquenta e cinco por cento)"] = f"{perc_integrar}% ({perc_ext})"
             mp["#integrar#%"] = f"{perc_integrar}%"
             mp["#integrar#"] = perc_integrar
+            
+        # --- Quantidade de empregos ---
+        if qtd_empregos:
+            mp["#emp#"] = str(qtd_empregos)
+            mp["(duzentos e noventa e sete)"] = f"({num_extenso(qtd_empregos, 'geral')})"
+            mp["(duzentos e noventa e quatro)"] = f"({num_extenso(qtd_empregos, 'geral')})"
 
         # --- Simples ---
         mp.update({
@@ -326,15 +348,6 @@ if gerar:
                 f"Parecer nº {parecer_num}, de {data_formato_ponto(dt_parecer)} "
                 f"(DOE de {data_formato_ponto(dt_doe)})"
             )
-            
-        # Corrigir a data do processo PROA
-        if proa_num and dt_proa:
-            # Substitui o texto completo incluindo a data errada
-            mp["#proa#, de 03 de setembro de 2024"] = f"{proa_num}, de {data_formato_ponto(dt_proa)}"
-            
-        if qtd_empregos:
-            mp["#emp#"] = str(qtd_empregos)
-            mp["(duzentos e noventa e sete)"] = f"({num_extenso(qtd_empregos, 'geral')})"
 
         # --- Geração DOCX ---
         doc = Document(str(TEMPLATE_FILE))
