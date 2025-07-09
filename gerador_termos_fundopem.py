@@ -51,6 +51,13 @@ def to_date(x) -> Optional[date]:
         return x
     if isinstance(x, datetime):
         return x.date()
+    if isinstance(x, str):
+        # Tenta diferentes formatos
+        for fmt in ["%d/%m/%Y", "%d.%m.%Y", "%Y-%m-%d"]:
+            try:
+                return datetime.strptime(x, fmt).date()
+            except ValueError:
+                continue
     try:
         return parse(str(x), dayfirst=True).date()
     except (ParserError, ValueError):
@@ -62,6 +69,12 @@ def data_texto(dt: date, mes_ano=False) -> str:
     if mes_ano:
         return f"{MESES[dt.month-1].capitalize()}/{dt.year}"
     return f"{dt.day} de {MESES[dt.month-1]} de {dt.year}"
+
+def data_formato_ponto(dt: date) -> str:
+    """Formata data no formato DD.MM.AAAA"""
+    if dt is None:
+        return ""
+    return f"{dt.day:02d}.{dt.month:02d}.{dt.year}"
 
 
 def num_extenso(num, modo="uif"):
@@ -122,9 +135,8 @@ def docx_replace(doc: Document, mapping: Dict[str, str]) -> Document:
                     run = runs[run_start_idx]
                     run.text = run.text[:offset_start] + str(value) + run.text[offset_end:]
                 
-                # Caso 2: Placeholder se estende por múltiplos runs (aqui está a correção)
+                # Caso 2: Placeholder se estende por múltiplos runs
                 else:
-                    
                     text_to_distribute = str(value)
                     
                     # 1. Trata o primeiro run
@@ -191,12 +203,13 @@ with st.form("dados"):
         empresa_cgcte = st.text_input("CGC/TE")
         empresa_endereco = st.text_input("Endereço Completo")
         proa_num = st.text_input("Nº do Processo (PROA)")
+        proa_data = st.text_input("Data do Processo (DD/MM/AAAA)", placeholder="26/12/2024")
     with c2:
         representante_nome = st.text_input("Nome do Representante Legal")
         representante_cpf = st.text_input("CPF do Representante")
         parecer_num = st.text_input("Nº do Parecer")
-        parecer_data = st.date_input("Data do Parecer", format="DD/MM/YYYY")
-        doe_data = st.date_input("Data do DOE", format="DD/MM/YYYY")
+        parecer_data = st.text_input("Data do Parecer (DD/MM/AAAA)", placeholder="24/04/2025")
+        doe_data = st.text_input("Data do DOE (DD/MM/AAAA)", placeholder="05/05/2025")
 
     st.subheader("2. Detalhes do Projeto")
     c3, c4 = st.columns(2)
@@ -223,8 +236,8 @@ with st.form("dados"):
         limite_max_liberado = st.text_input("Limite Máximo Liberado (4.1.2)")
         valor_liberado_fruicao = st.text_input("Valor Liberado p/ Fruição (4.1.2.1)")
     with c6:
-        data_inicio = st.date_input("Início da Vigência", format="DD/MM/YYYY")
-        data_final_fruicao = st.date_input("Final da Fruição", format="DD/MM/YYYY")
+        data_inicio = st.text_input("Início da Vigência (DD/MM/AAAA)", placeholder="01/08/2025")
+        data_final_fruicao = st.text_input("Final da Fruição (DD/MM/AAAA)", placeholder="31/01/2032")
         mes_regularidade = st.text_input("Mês da Regularidade (ex: Julho/2025)")
 
     gerar = st.form_submit_button("🚀 Gerar Documento Word", type="primary")
@@ -292,16 +305,33 @@ if gerar:
         mp.pop("#cpf#", None)
 
         # --- Datas ---
-        mp["#inicio#"] = data_texto(to_date(data_inicio))
-        mp["#final#"] = data_texto(to_date(data_final_fruicao), mes_ano=True)
-        mp["#final2#"] = data_texto(to_date(data_final_fruicao), mes_ano=True).replace(" ", "")
+        # Usando formato com ponto para as datas do parecer
+        dt_inicio = to_date(data_inicio)
+        dt_final = to_date(data_final_fruicao)
+        dt_parecer = to_date(parecer_data)
+        dt_doe = to_date(doe_data)
+        dt_proa = to_date(proa_data)
+        
+        # Data de início em formato com ponto (01.08.2025)
+        mp["#inicio#"] = data_formato_ponto(dt_inicio)
+        
+        # Data final em formato Mês/Ano
+        mp["#final#"] = data_texto(dt_final, mes_ano=True)
+        mp["#final2#"] = data_texto(dt_final, mes_ano=True).replace(" ", "")
         mp["#regularidade#"] = mes_regularidade
 
-        if parecer_num and parecer_data and doe_data:
+        # Parecer com datas em formato ponto
+        if parecer_num and dt_parecer and dt_doe:
             mp["Parecer nº xxx/aaaa, de dd.mm.aaaa (DOE de dd.mm.aaaa)"] = (
-                f"Parecer Nº {parecer_num}, de {data_texto(to_date(parecer_data))} "
-                f"(DOE de {data_texto(to_date(doe_data))})"
+                f"Parecer nº {parecer_num}, de {data_formato_ponto(dt_parecer)} "
+                f"(DOE de {data_formato_ponto(dt_doe)})"
             )
+            
+        # Corrigir a data do processo PROA
+        if proa_num and dt_proa:
+            # Substitui o texto completo incluindo a data errada
+            mp["#proa#, de 03 de setembro de 2024"] = f"{proa_num}, de {data_formato_ponto(dt_proa)}"
+            
         if qtd_empregos:
             mp["#emp#"] = str(qtd_empregos)
             mp["(duzentos e noventa e sete)"] = f"({num_extenso(qtd_empregos, 'geral')})"
